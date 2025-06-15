@@ -1,0 +1,90 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Dependency directories
+bower_components/
+
+# Build directories
+dist/
+build/
+out/
+target/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor config files
+.idea/
+.vscode/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Misc
+*.swp
+*~
+*.bak
+*.tmp
+
+# Python (if backend is in Python)
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Django specific
+*.log
+*.pot
+*.pyc
+*.sqlite3
+
+# Flask specific
+instance/
+*.db
+
+# Ruby (if backend is in Ruby)
+*.gem
+*.rbc
+.bundle/
+log/
+tmp/
+
+# Java (if backend is in Java)
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+
+# .NET (if backend is in C# or ASP.NET)
+bin/
+obj/
+.vs/
+
+# Go (if backend is in Go)
+bin/
+pkg/
+
+# JavaScript (if backend is in Node.js, but this section is for backend focus)
+npm-debug.log
+yarn-error.log
+node_modules/
+
+# Backup files
+*.bak
+*.swp
+*.tmp
+*.XLSX
+*.xlsm
+*.xlsx
+*.xls
+
