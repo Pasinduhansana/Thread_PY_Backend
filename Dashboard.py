@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, json, request, jsonify, send_file
 import pandas as pd
 import os
 import re
@@ -48,7 +48,7 @@ def upload_file():
         article_colour_code = "Color Code"
         article_colour_name = "Color Name"
         rmpo_no = "RMPONo" 
-        print("Test 3 Passed")
+        
         
         pivot_table = df.pivot_table(
             index=[Ship_to_location,sub_category,rmpo_no, article_code,article_name, article_colour_code,article_colour_name ],  
@@ -163,5 +163,49 @@ def process_excel_in_chunks(file_path, columns, chunk_size=1000):
     # Combine all chunks
     return pd.concat(all_data) if all_data else pd.DataFrame(columns=columns)
 
+@app.route("/save_priority_orders", methods=["POST"])
+def save_priority_orders():
+    try:
+        priority_orders = request.json.get("priorityOrders", [])
+        if not priority_orders:
+            return jsonify({"error": "No priority orders provided"}), 400
+
+        # Save priority orders to a file or database
+        priority_file_path = os.path.join(UPLOAD_FOLDER, "priority_orders.json")
+        with open(priority_file_path, "w") as f:
+            json.dump(priority_orders, f, indent=4)
+
+        return jsonify({"message": "Priority orders saved successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/fetch_priority_orders", methods=["GET"])
+def fetch_priority_orders():
+    try:
+        priority_file_path = os.path.join(UPLOAD_FOLDER, "priority_orders.json")
+        if not os.path.exists(priority_file_path):
+            print("Priority orders file does not exist.")
+            return jsonify({"error": "No priority orders found"}), 404
+
+        with open(priority_file_path, "r") as f:
+            priority_orders = json.load(f)
+
+        return jsonify({"priorityOrders": priority_orders}), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/delete_priority_orders", methods=["DELETE"])
+def delete_priority_orders():
+    try:
+        priority_file_path = os.path.join(UPLOAD_FOLDER, "priority_orders.json")
+        if os.path.exists(priority_file_path):
+            os.remove(priority_file_path)
+            return jsonify({"message": "Priority orders deleted successfully"}), 200
+        else:
+            return jsonify({"error": "No priority orders found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 if __name__ == "__main__":
     app.run(debug=True)

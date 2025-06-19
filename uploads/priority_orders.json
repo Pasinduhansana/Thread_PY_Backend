@@ -1,0 +1,354 @@
+[
+    {
+        "Article Sub Category": "THREAD (DECIMAL)",
+        "Balance to Receive Qty": 1,
+        "Qty": 0,
+        "RMPONo": "PR2425/629452",
+        "Ship to Location": "BRANDIX APPAREL SOLUTIONS LTD",
+        "Total PO Qty": 589,
+        "Total Received Qty": 588,
+        "articles": [
+            {
+                "Article Code": "STHD003211",
+                "Article Name": "2925100-EPIC    100T30 2500M  CONE PPC--EPIC100",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "18ETJ",
+                "Color Name": "18ETJ",
+                "PO Qty(Purchase UOM)": 30,
+                "Qty": 0,
+                "Received Qty": 30
+            },
+            {
+                "Article Code": "STHD003211",
+                "Article Name": "2925100-EPIC    100T30 2500M  CONE PPC--EPIC100",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C7262",
+                "Color Name": "C7262",
+                "PO Qty(Purchase UOM)": 67,
+                "Qty": 0,
+                "Received Qty": 67
+            },
+            {
+                "Article Code": "STHD003212",
+                "Article Name": "2925120-EPIC    120T24 2500M  CONE PPC--EPIC120",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C7262",
+                "Color Name": "C7262",
+                "PO Qty(Purchase UOM)": 3,
+                "Qty": 0,
+                "Received Qty": 3
+            },
+            {
+                "Article Code": "STHD003214",
+                "Article Name": "2925180-EPIC    180T18 2500M  CONE PPC--EPIC180",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "18ETJ",
+                "Color Name": "18ETJ",
+                "PO Qty(Purchase UOM)": 13,
+                "Qty": 0,
+                "Received Qty": 13
+            },
+            {
+                "Article Code": "STHD003214",
+                "Article Name": "2925180-EPIC    180T18 2500M  CONE PPC--EPIC180",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C7262",
+                "Color Name": "C7262",
+                "PO Qty(Purchase UOM)": 16,
+                "Qty": 0,
+                "Received Qty": 16
+            },
+            {
+                "Article Code": "STHD003241",
+                "Article Name": "5722160-GRAMAX   160T18 2500M  VCN TXP--GRAMAX160",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "18ETJ",
+                "Color Name": "18ETJ",
+                "PO Qty(Purchase UOM)": 36,
+                "Qty": 0,
+                "Received Qty": 36
+            },
+            {
+                "Article Code": "STHD003241",
+                "Article Name": "5722160-GRAMAX   160T18 2500M  VCN TXP--GRAMAX160",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C7262",
+                "Color Name": "C7262",
+                "PO Qty(Purchase UOM)": 131,
+                "Qty": 0,
+                "Received Qty": 131
+            },
+            {
+                "Article Code": "STHD003343",
+                "Article Name": "F025160-SEAMSOFT  160T18 2500M  VCN MFP--SEAMSOFT160",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "18ETJ",
+                "Color Name": "18ETJ",
+                "PO Qty(Purchase UOM)": 76,
+                "Qty": 0,
+                "Received Qty": 76
+            },
+            {
+                "Article Code": "STHD003343",
+                "Article Name": "F025160-SEAMSOFT  160T18 2500M  VCN MFP--SEAMSOFT160",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "C7262",
+                "Color Name": "C7262",
+                "PO Qty(Purchase UOM)": 217,
+                "Qty": 0,
+                "Received Qty": 216
+            }
+        ]
+    },
+    {
+        "Article Sub Category": "THREAD (DECIMAL)",
+        "Balance to Receive Qty": 2,
+        "Qty": 0,
+        "RMPONo": "PR2425/612492",
+        "Ship to Location": "BRANDIX APPAREL SOLUTIONS LTD",
+        "Total PO Qty": 2,
+        "Total Received Qty": 0,
+        "articles": [
+            {
+                "Article Code": "STHD003205",
+                "Article Name": "2910120-EPIC    120T24 1000M  CONE PPC--EPIC120",
+                "Balance to Receive Qty": 2,
+                "Billing Doc. No": "[]",
+                "Color Code": "90HTJ",
+                "Color Name": "90HTJ",
+                "PO Qty(Purchase UOM)": 2,
+                "Qty": 0,
+                "Received Qty": 0
+            }
+        ]
+    },
+    {
+        "Article Sub Category": "THREAD (DECIMAL)",
+        "Balance to Receive Qty": 0,
+        "Qty": 0,
+        "RMPONo": "PR2425/616811",
+        "Ship to Location": "BRANDIX APPAREL SOLUTIONS LTD",
+        "Total PO Qty": 481,
+        "Total Received Qty": 481,
+        "articles": [
+            {
+                "Article Code": "STHD003211",
+                "Article Name": "2925100-EPIC    100T30 2500M  CONE PPC--EPIC100",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "59UTB",
+                "Color Name": "59UTB",
+                "PO Qty(Purchase UOM)": 36,
+                "Qty": 0,
+                "Received Qty": 36
+            },
+            {
+                "Article Code": "STHD003211",
+                "Article Name": "2925100-EPIC    100T30 2500M  CONE PPC--EPIC100",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C1730",
+                "Color Name": "WHITE",
+                "PO Qty(Purchase UOM)": 1,
+                "Qty": 0,
+                "Received Qty": 1
+            },
+            {
+                "Article Code": "STHD003211",
+                "Article Name": "2925100-EPIC    100T30 2500M  CONE PPC--EPIC100",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 19,
+                "Qty": 0,
+                "Received Qty": 19
+            },
+            {
+                "Article Code": "STHD003212",
+                "Article Name": "2925120-EPIC    120T24 2500M  CONE PPC--EPIC120",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "59UTB",
+                "Color Name": "59UTB",
+                "PO Qty(Purchase UOM)": 1,
+                "Qty": 0,
+                "Received Qty": 1
+            },
+            {
+                "Article Code": "STHD003251",
+                "Article Name": "57A3140-GRAMAX  AS 140T21 3000M  VCN TXP--GRAMAX140",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "59UTB",
+                "Color Name": "59UTB",
+                "PO Qty(Purchase UOM)": 110,
+                "Qty": 0,
+                "Received Qty": 110
+            },
+            {
+                "Article Code": "STHD003251",
+                "Article Name": "57A3140-GRAMAX  AS 140T21 3000M  VCN TXP--GRAMAX140",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 52,
+                "Qty": 0,
+                "Received Qty": 52
+            },
+            {
+                "Article Code": "STHD003342",
+                "Article Name": "F025140-SEAMSOFT  140T24 2500M  VCN MFP--SEAMSOFT140",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "59UTB",
+                "Color Name": "59UTB",
+                "PO Qty(Purchase UOM)": 201,
+                "Qty": 0,
+                "Received Qty": 201
+            },
+            {
+                "Article Code": "STHD003342",
+                "Article Name": "F025140-SEAMSOFT  140T24 2500M  VCN MFP--SEAMSOFT140",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 61,
+                "Qty": 0,
+                "Received Qty": 61
+            }
+        ]
+    },
+    {
+        "Article Sub Category": "THREAD (DECIMAL)",
+        "Balance to Receive Qty": 137,
+        "Qty": 0,
+        "RMPONo": "PR2425/631476",
+        "Ship to Location": "BRANDIX APPAREL SOLUTIONS LTD",
+        "Total PO Qty": 491,
+        "Total Received Qty": 354,
+        "articles": [
+            {
+                "Article Code": "STHD003146",
+                "Article Name": "4810120-AQUAMELT  120T27 5000M  CONE PVA--AUAMELT120",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "NATURAL",
+                "Color Name": "NATURAL",
+                "PO Qty(Purchase UOM)": 7,
+                "Qty": 0,
+                "Received Qty": 6
+            },
+            {
+                "Article Code": "STHD003205",
+                "Article Name": "2910120-EPIC    120T24 1000M  CONE PPC--EPIC120",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 4,
+                "Qty": 0,
+                "Received Qty": 3
+            },
+            {
+                "Article Code": "STHD004113",
+                "Article Name": "8710010-ASTRA 10T240 1000M CONE SSP--ASTRA010",
+                "Balance to Receive Qty": 0,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 2,
+                "Qty": 0,
+                "Received Qty": 2
+            },
+            {
+                "Article Code": "STHD004116",
+                "Article Name": "1322060-GRAL 60T40 3000M VCN CFP--GRAL060",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 4,
+                "Qty": 0,
+                "Received Qty": 3
+            },
+            {
+                "Article Code": "STHD005169",
+                "Article Name": "5AV2140-GRAMAX PRO 140 2500M--GRAMAX PRO 140",
+                "Balance to Receive Qty": 20,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 71,
+                "Qty": 0,
+                "Received Qty": 51
+            },
+            {
+                "Article Code": "STHD005169",
+                "Article Name": "5AV2140-GRAMAX PRO 140 2500M--GRAMAX PRO 140",
+                "Balance to Receive Qty": 2,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 9,
+                "Qty": 0,
+                "Received Qty": 7
+            },
+            {
+                "Article Code": "STHD005170",
+                "Article Name": "FA82140-SEAMSOFT PRO 140 2500M--SEAMSOFT PRO 140",
+                "Balance to Receive Qty": 45,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 158,
+                "Qty": 0,
+                "Received Qty": 113
+            },
+            {
+                "Article Code": "STHD005170",
+                "Article Name": "FA82140-SEAMSOFT PRO 140 2500M--SEAMSOFT PRO 140",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 5,
+                "Qty": 0,
+                "Received Qty": 4
+            },
+            {
+                "Article Code": "STHD005171",
+                "Article Name": "2A97120-EPIC PRO 120 2500M--EPIC PRO 120",
+                "Balance to Receive Qty": 65,
+                "Billing Doc. No": "[]",
+                "Color Code": "76TTG",
+                "Color Name": "76TTG",
+                "PO Qty(Purchase UOM)": 227,
+                "Qty": 0,
+                "Received Qty": 162
+            },
+            {
+                "Article Code": "STHD005171",
+                "Article Name": "2A97120-EPIC PRO 120 2500M--EPIC PRO 120",
+                "Balance to Receive Qty": 1,
+                "Billing Doc. No": "[]",
+                "Color Code": "C9760",
+                "Color Name": "BLACK",
+                "PO Qty(Purchase UOM)": 4,
+                "Qty": 0,
+                "Received Qty": 3
+            }
+        ]
+    }
+]
