@@ -196,23 +196,33 @@ def fetch_priority_orders():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Replace with the publicly shared link
-SHARED_LINK = os.environ.get("SHARED_LINK")
+@app.route("/fetch_shared_data", methods=["GET"])
+def fetch_shared_data():
+    try:
+        # Get the shared link from the environment variable
+        shared_link = os.environ.get("SHARED_LINK")
+        if not shared_link:
+            return jsonify({"error": "SHARED_LINK environment variable is not defined"}), 500
 
-def fetch_excel_from_shared_link():
-    response = requests.get(SHARED_LINK)
+        # Fetch the Excel file from the shared link
+        response = requests.get(shared_link)
+        if response.status_code != 200:
+            return jsonify({"error": f"Failed to fetch file: {response.status_code}"}), 500
 
-    if response.status_code == 200:
         # Save the file locally
-        with open("file.xlsx", "wb") as f:
+        file_path = "shared_data.xlsx"
+        with open(file_path, "wb") as f:
             f.write(response.content)
 
         # Read the Excel file
-        df = pd.read_excel("file.xlsx")
-        print(df)
-    else:
-        print(f"Failed to fetch file: {response.status_code}, {response.text}")
+        df = pd.read_excel(file_path)
 
+        # Convert the data to JSON
+        data = df.to_dict(orient="records")
+        return jsonify(data), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     
 if __name__ == "__main__":
