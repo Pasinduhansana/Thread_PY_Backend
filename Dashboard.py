@@ -212,7 +212,7 @@ def fetch_shared_data():
         # Save the file locally
         file_path = "shared_data.xlsx"
         with open(file_path, "wb") as f:
-            f.write(response.content)
+            f.write(response.content)git 
 
         # Read the Excel file
         df = pd.read_excel(file_path)
