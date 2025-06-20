@@ -2,6 +2,7 @@ from flask import Flask, json, request, jsonify, send_file
 import pandas as pd
 import os
 import re
+import requests
 
 app = Flask(__name__)
 
@@ -14,7 +15,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/upload_Dashboard", methods=["POST"])
 def upload_file():
-
+    fetch_excel_from_shared_link()
     kpi_file = request.files.get("kpi")
     invoice_file = request.files.get("invoice")
     if not kpi_file or not invoice_file:
@@ -195,17 +196,25 @@ def fetch_priority_orders():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/delete_priority_orders", methods=["DELETE"])
-def delete_priority_orders():
-    try:
-        priority_file_path = os.path.join(UPLOAD_FOLDER, "priority_orders.json")
-        if os.path.exists(priority_file_path):
-            os.remove(priority_file_path)
-            return jsonify({"message": "Priority orders deleted successfully"}), 200
-        else:
-            return jsonify({"error": "No priority orders found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+# Replace with the publicly shared link
+SHARED_LINK = os.environ.get("SHARED_LINK")
+
+def fetch_excel_from_shared_link():
+    response = requests.get(SHARED_LINK)
+
+    if response.status_code == 200:
+        # Save the file locally
+        with open("file.xlsx", "wb") as f:
+            f.write(response.content)
+
+        # Read the Excel file
+        df = pd.read_excel("file.xlsx")
+        print(df)
+    else:
+        print(f"Failed to fetch file: {response.status_code}, {response.text}")
+
+
     
 if __name__ == "__main__":
     app.run(debug=True)
+
