@@ -214,7 +214,7 @@ def fetch_shared_data():
         with open(file_path, "wb") as f:
             f.write(response.content)
 
-        # Read the Excel file
+        # Read the Excel fil
         df = pd.read_excel(file_path)
 
         # Convert the data to JSON
@@ -224,6 +224,15 @@ def fetch_shared_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+#Need to delete following code
+def calnumber_of_rows(file_path):
+    """Calculate the number of rows in an Excel file."""
+    try:
+        df = pd.read_excel(file_path, engine='openpyxl')
+        return len(df)
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return 0
     
 if __name__ == "__main__":
     app.run(debug=True)
