@@ -22,6 +22,12 @@ def upload_file():
     #Load PCD File - if not get the previous PCD File
     pcd_file_path=os.path.join(UPLOAD_FOLDER,"Production Plan.xlsx")
     pcd_df = pd.read_excel(pcd_file_path, engine="openpyxl")
+    print("pass data")
+    pcd_df.rename(columns={    pcd_df.columns[0]: 'OC',
+                                pcd_df.columns[1]: 'PCD',  
+                                pcd_df.columns[2]: 'PSD'   
+                            }, inplace=True)
+    print("pass data 1")
     
     kpi_file = request.files.get("kpi")
     invoice_file = request.files.get("invoice")
@@ -57,10 +63,12 @@ def upload_file():
         article_colour_name = "Color Name"
         rmpo_no = "RMPONo" 
         
-        # Convert PCD/PSD columns to datetime
-        pcd_df['PCD'] = pd.to_datetime(pcd_df['PCD'], errors='coerce')
-        pcd_df['PSD'] = pd.to_datetime(pcd_df['PSD'], errors='coerce')
         print("test 0.1")
+        # Convert PCD/PSD columns to datetime
+        pcd_df["PCD"] = pd.to_datetime(pcd_df["PCD"], errors='coerce')
+        pcd_df["PSD"] = pd.to_datetime(pcd_df["PSD"], errors='coerce')
+ 
+        print(pcd_df)
         
         # Find earliest PCD/PSD for each OC (or PO if that's the key)
         earliest_pcd = pcd_df.groupby('OC')['PCD'].min().reset_index().rename(columns={'PCD': 'Earliest PCD'})
@@ -70,19 +78,19 @@ def upload_file():
         # Merge with KPI data on OC
         # Need to print earliest PCd list 
 
-        print("KPI columns:", df.columns.tolist())
+        # print("KPI columns:", df.columns.tolist())
         #pcd_df['OC Number'] = pcd_df['OC'] 
-        print("PCD columns:", pcd_df.columns.tolist())
-        print("df OC Number sample:", df['OC Number'].head())
-        print(df)
+        # print("PCD columns:", pcd_df.columns.tolist())
+        # print("df OC Number sample:", df)
+        # print(df)
         
         df = df.merge(earliest_pcd, left_on="OC Number", right_on='OC', how='left')
         print("test 0.3")
         df = df.merge(earliest_psd, left_on="OC Number", right_on='OC', how='left')
         print("test 0.4")
-        print("KPI columns:", df.columns.tolist())
-        print(df)
-
+        # print("KPI columns:", df.columns.tolist())
+        # print(df)
+#
         # If you want to group by PO, do:
         earliest_pcd_article = df.groupby(['RMPONo', 'Article Code', 'Color Code'])['Earliest PCD'].min().reset_index()
         earliest_psd_article = df.groupby(['RMPONo', 'Article Code', 'Color Code'])['Earliest PSD'].min().reset_index()
@@ -99,7 +107,7 @@ def upload_file():
             aggfunc="sum"  # Aggregation function (sum, mean, count, etc.)
         )
         print("test 0.6")
-        print(pivot_table)
+        # print(pivot_table)
         
 
         # Reset index to make it tabular
@@ -116,7 +124,7 @@ def upload_file():
         invoice_table["Coats Key"] = invoice_table["Customer PO No."] + invoice_table["Material Code"]
 
         # Add new Column to add PCD date
-        print(pivot_table.columns.tolist())
+        # print(pivot_table.columns.tolist())
         pivot_table = pivot_table.merge(earliest_pcd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
         pivot_table = pivot_table.merge(earliest_psd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
         pivot_table['Earliest PCD'] = pivot_table['Earliest PCD'].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else None)
@@ -124,7 +132,7 @@ def upload_file():
         pivot_table['Earliest PCD'] = pivot_table['Earliest PCD'].fillna("o")
         pivot_table['Earliest PSD'] = pivot_table['Earliest PSD'].fillna("o")
         
-        print(pivot_table)
+        # print(pivot_table)
         print("test 0.7")
         
         # Merging Invoices into Pivot Table (Left Join)
@@ -232,7 +240,24 @@ def save_priority_orders():
         priority_file_path = os.path.join(UPLOAD_FOLDER, "priority_orders.json")
         with open(priority_file_path, "w") as f:
             json.dump(priority_orders, f, indent=4)
+            
+        # --- Update processed_data.xlsx with Is Priority column ---
+        processed_file_path = os.path.join(UPLOAD_FOLDER, "processed_data.xlsx")
+        if os.path.exists(processed_file_path):
+            df = pd.read_excel(processed_file_path, engine="openpyxl")
 
+            # Build a set of priority keys for fast lookup
+            # Adjust the key fields as per your priority order structure and processed_data columns
+            priority_keys = set()
+            for po in priority_orders:
+                priority_keys.add(po.get("RMPONo"))
+
+            def is_priority(row):
+                return "Yes" if (row["RMPONo"]) in priority_keys else "No"
+
+            df["Is Priority"] = df.apply(is_priority, axis=1)
+            df.to_excel(processed_file_path, index=False)            
+    
         return jsonify({"message": "Priority orders saved successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
