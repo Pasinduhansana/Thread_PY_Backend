@@ -3,6 +3,9 @@ import pandas as pd
 import os
 import re
 import requests
+from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -15,7 +18,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 @app.route("/upload_Dashboard", methods=["POST"])
 def upload_file():
-    fetch_excel_from_shared_link()
+
+    #Load PCD File - if not get the previous PCD File
+    pcd_file_path=os.path.join(UPLOAD_FOLDER,"Production Plan.xlsx")
+    pcd_df = pd.read_excel(pcd_file_path, engine="openpyxl")
+    
     kpi_file = request.files.get("kpi")
     invoice_file = request.files.get("invoice")
     if not kpi_file or not invoice_file:
@@ -30,7 +37,7 @@ def upload_file():
     try:
         
         # Read the Excel file into a DataFrapipme
-        columns_to_read = [ "Season","Style Code","Style Name","Supplier Name","RMPONo","RMPO Status","Article Sub Category","Article Code","Article Name","Color Code","Color Name","Size Code","PO Qty(Purchase UOM)","Received Qty","Balance to Receive Qty","Ship to Location","PO Value","OCFactory","DS In-House","Ship to Location"]
+        columns_to_read = ["OC Number", "Season","Style Code","Style Name","Supplier Name","RMPONo","RMPO Status","Article Sub Category","Article Code","Article Name","Color Code","Color Name","Size Code","PO Qty(Purchase UOM)","Received Qty","Balance to Receive Qty","Ship to Location","PO Value","OCFactory","DS In-House","Ship to Location"]
         df = pd.read_excel(kpi_file, usecols=columns_to_read,nrows=100000, engine="openpyxl")   
         df = df[df['Article Sub Category'] == 'THREAD (DECIMAL)']
 
@@ -50,12 +57,50 @@ def upload_file():
         article_colour_name = "Color Name"
         rmpo_no = "RMPONo" 
         
+        # Convert PCD/PSD columns to datetime
+        pcd_df['PCD'] = pd.to_datetime(pcd_df['PCD'], errors='coerce')
+        pcd_df['PSD'] = pd.to_datetime(pcd_df['PSD'], errors='coerce')
+        print("test 0.1")
+        
+        # Find earliest PCD/PSD for each OC (or PO if that's the key)
+        earliest_pcd = pcd_df.groupby('OC')['PCD'].min().reset_index().rename(columns={'PCD': 'Earliest PCD'})
+        earliest_psd = pcd_df.groupby('OC')['PSD'].min().reset_index().rename(columns={'PSD': 'Earliest PSD'})
+        print("test 0.2")
+
+        # Merge with KPI data on OC
+        # Need to print earliest PCd list 
+
+        print("KPI columns:", df.columns.tolist())
+        #pcd_df['OC Number'] = pcd_df['OC'] 
+        print("PCD columns:", pcd_df.columns.tolist())
+        print("df OC Number sample:", df['OC Number'].head())
+        print(df)
+        
+        df = df.merge(earliest_pcd, left_on="OC Number", right_on='OC', how='left')
+        print("test 0.3")
+        df = df.merge(earliest_psd, left_on="OC Number", right_on='OC', how='left')
+        print("test 0.4")
+        print("KPI columns:", df.columns.tolist())
+        print(df)
+
+        # If you want to group by PO, do:
+        earliest_pcd_article = df.groupby(['RMPONo', 'Article Code', 'Color Code'])['Earliest PCD'].min().reset_index()
+        earliest_psd_article = df.groupby(['RMPONo', 'Article Code', 'Color Code'])['Earliest PSD'].min().reset_index()
+        
+        df = df.merge(earliest_pcd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
+        df = df.merge(earliest_psd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
+        
+        print("test 0.5")
+        # print("KPI columns:", df.columns.tolist())
         
         pivot_table = df.pivot_table(
-            index=[Ship_to_location,sub_category,rmpo_no, article_code,article_name, article_colour_code,article_colour_name ],  
+            index=[Ship_to_location,sub_category,rmpo_no, article_code,article_name, article_colour_code,article_colour_name],  
             values=[PO_Qty_Column,Received_qty,Balance_to_Receive_Qty_column],  # Values to aggregate
             aggfunc="sum"  # Aggregation function (sum, mean, count, etc.)
         )
+        print("test 0.6")
+        print(pivot_table)
+        
 
         # Reset index to make it tabular
         pivot_table = pivot_table.reset_index()
@@ -70,6 +115,18 @@ def upload_file():
         # Add new column to invoice report
         invoice_table["Coats Key"] = invoice_table["Customer PO No."] + invoice_table["Material Code"]
 
+        # Add new Column to add PCD date
+        print(pivot_table.columns.tolist())
+        pivot_table = pivot_table.merge(earliest_pcd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
+        pivot_table = pivot_table.merge(earliest_psd_article,left_on=['RMPONo', 'Article Code', 'Color Code'],right_on=['RMPONo', 'Article Code', 'Color Code'],how='left')
+        pivot_table['Earliest PCD'] = pivot_table['Earliest PCD'].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else None)
+        pivot_table['Earliest PSD'] = pivot_table['Earliest PSD'].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else None)
+        pivot_table['Earliest PCD'] = pivot_table['Earliest PCD'].fillna("o")
+        pivot_table['Earliest PSD'] = pivot_table['Earliest PSD'].fillna("o")
+        
+        print(pivot_table)
+        print("test 0.7")
+        
         # Merging Invoices into Pivot Table (Left Join)
         merged_table = pivot_table.merge(invoice_table, on="Coats Key", how="left")
 
@@ -108,13 +165,13 @@ def fetch_saved_data():
 
         # Read the saved Excel file
         df = pd.read_excel(processed_file_path, engine="openpyxl")
+        print(df)
         last_uploaded_date = df["Last Uploaded Date"].iloc[0] if "Last Uploaded Date" in df.columns else "Unknown"
         return jsonify({"data": df.to_dict(orient="records"), "last_uploaded_date": last_uploaded_date})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-
 @app.route("/export", methods=["POST"])
 def export_data():
     try:
@@ -199,24 +256,47 @@ def fetch_priority_orders():
 @app.route("/fetch_shared_data", methods=["GET"])
 def fetch_shared_data():
     try:
+        print("test passed 0")
+
+                    
         # Get the shared link from the environment variable
         shared_link = os.environ.get("SHARED_LINK")
+        print("test passed 1")
         if not shared_link:
             return jsonify({"error": "SHARED_LINK environment variable is not defined"}), 500
 
         # Fetch the Excel file from the shared link
         response = requests.get(shared_link)
+        print("test passed 2")
         if response.status_code != 200:
             return jsonify({"error": f"Failed to fetch file: {response.status_code}"}), 500
 
+        print("test passed 2.1")
         # Save the file locally
-        file_path = "shared_data.xlsx"
-        with open(file_path, "wb") as f:
-            f.write(response.content)
+        response = requests.get(shared_link)
+        content_type = response.headers.get("Content-Type", "")
+        if "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" not in content_type:
+            print(f"Content-Type: {content_type}")
+            raise ValueError(f"Downloaded file is not an Excel file. Content-Type: {content_type}")
+           
+        print("test passed 2.2")
 
-        # Read the Excel fil
-        df = pd.read_excel(file_path)
+        file_path = request.args.get("file_path", None)
+        print("test passed 2.3")
+        
+        if not file_path:
+            if os.path.exists("selected_file_path.json"):
+                with open("selected_file_path.json", "r") as f:
+                    file_path = json.load(f).get("file_path", None)
+                    
+        if not file_path or not os.path.exists(file_path):
+            return jsonify([]), 200
+                    
 
+
+        # Read the Excel file
+        df = pd.read_excel(file_path, engine="openpyxl")
+        print("Read Test Successs !")
         # Convert the data to JSON
         data = df.to_dict(orient="records")
         return jsonify(data), 200
@@ -224,15 +304,33 @@ def fetch_shared_data():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-#Need to delete following code
-def calnumber_of_rows(file_path):
-    """Calculate the number of rows in an Excel file."""
+@app.route("/upload_pcd", methods=["POST"])
+def upload_pcd():
+    pcd_file = request.files.get("pcd")
+    if not pcd_file:
+        return jsonify({"error": "PCD file is required"}), 400
+
+    pcd_path = os.path.join(UPLOAD_FOLDER, "Production Plan.xlsx")
+    pcd_file.save(pcd_path)
+
+    # Save last updated time
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(os.path.join(UPLOAD_FOLDER, "pcd_last_updated.txt"), "w") as f:
+        f.write(last_updated)
+
+    return jsonify({"message": "PCD file uploaded successfully", "last_updated": last_updated})
+
+@app.route("/get_pcd_last_updated", methods=["GET"])
+def get_pcd_last_updated():
     try:
-        df = pd.read_excel(file_path, engine='openpyxl')
-        return len(df)
+        path = os.path.join(UPLOAD_FOLDER, "pcd_last_updated.txt")
+        if not os.path.exists(path):
+            return jsonify({"last_updated": ""})
+        with open(path, "r") as f:
+            last_updated = f.read()
+        return jsonify({"last_updated": last_updated})
     except Exception as e:
-        print(f"Error reading file: {e}")
-        return 0
+        return jsonify({"error": str(e)}), 500
     
 if __name__ == "__main__":
     app.run(debug=True)
