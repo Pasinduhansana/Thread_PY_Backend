@@ -4,8 +4,8 @@ import os
 import re
 import requests
 from datetime import datetime
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 app = Flask(__name__)
 
