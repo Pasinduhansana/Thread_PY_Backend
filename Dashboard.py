@@ -3,7 +3,11 @@ import pandas as pd
 import os
 import re
 import requests
+from openpyxl import load_workbook
+import smtplib
 from datetime import datetime
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 # from dotenv import load_dotenv
 # load_dotenv()
 
@@ -151,6 +155,17 @@ def upload_file():
         pivot_table["Billing Doc. No"] = pivot_table["Billing Doc. No"].apply(lambda x: x if isinstance(x, list) else [])
         pivot_table["Qty"] = pivot_table["Qty"].fillna(0).astype(int)
         
+        # After building pivot_table and before saving
+        exmill_path = os.path.join(UPLOAD_FOLDER, "orderbook_exmill.json")
+        if os.path.exists(exmill_path):
+            with open(exmill_path, "r") as f:
+                exmill_map = json.load(f)
+            pivot_table["Ex-Mill Date"] = pivot_table["Coats Key"].map(exmill_map).fillna("o")
+        else:
+            pivot_table["Ex-Mill Date"] = "o"
+            
+        print(pivot_table)
+        
         #add last uploaded date
         pivot_table["Last Uploaded Date"] = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -282,9 +297,6 @@ def fetch_priority_orders():
 def fetch_shared_data():
     try:
         print("test passed 0")
-
-                    
-        # Get the shared link from the environment variable
         shared_link = os.environ.get("SHARED_LINK")
         print("test passed 1")
         if not shared_link:
@@ -356,7 +368,638 @@ def get_pcd_last_updated():
         return jsonify({"last_updated": last_updated})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/upload_orderbook", methods=["POST"])
+def upload_orderbook():
+    orderbook_file = request.files.get("orderbook")
+    if not orderbook_file:
+        return jsonify({"error": "Orderbook file is required"}), 400
+
+    orderbook_path = os.path.join(UPLOAD_FOLDER, "Orderbook.xlsx")
+    orderbook_json_path = os.path.join(UPLOAD_FOLDER, "orderbook.json")
+    orderbook_file.save(orderbook_path)
+
+    # Save last updated time
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(os.path.join(UPLOAD_FOLDER, "orderbook_last_updated.txt"), "w") as f:
+        f.write(last_updated)
+
+    # Extract Ex-Mill Date mapping and save full orderbook as JSON
+    try:
+        df = pd.read_excel(orderbook_path, engine="openpyxl")
+        df["Coats Key"] = df["Purchase Order Number"].astype(str) + df["Material"].astype(str)
+        exmill_map = dict(zip(df["Coats Key"], df["Delivery Date"].astype(str)))
+        with open(os.path.join(UPLOAD_FOLDER, "orderbook_exmill.json"), "w") as f:
+            json.dump(exmill_map, f)
+            
+        # Save full orderbook as JSON
+        df.to_json(orderbook_json_path, orient="records", force_ascii=False)
+        # Optionally remove the Excel file
+        # os.remove(orderbook_path)
+    except Exception as e:
+        print("Failed to process orderbook:", e)
+
+    return jsonify({"message": "Orderbook file uploaded successfully", "last_updated": last_updated})
+
+@app.route("/get_orderbook_last_updated", methods=["GET"])
+def get_orderbook_last_updated():
+    try:
+        path = os.path.join(UPLOAD_FOLDER, "orderbook_last_updated.txt")
+        if not os.path.exists(path):
+            return jsonify({"last_updated": ""})
+        with open(path, "r") as f:
+            last_updated = f.read()
+        return jsonify({"last_updated": last_updated})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500  
     
+@app.route("/supplier_dashboard_data", methods=["GET"])
+def supplier_dashboard_data():
+    try:
+        processed_file_path = os.path.join(UPLOAD_FOLDER, "processed_data.xlsx")
+        if not os.path.exists(processed_file_path):
+            return jsonify({"error": "No saved data found"}), 404
+
+        # Read the saved Excel file
+        df = pd.read_excel(processed_file_path, engine="openpyxl")
+        
+        # Convert dates to proper format
+        date_cols = ["Ex-Mill Date", "Earliest PCD", "Earliest PSD"]
+        for col in date_cols:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
+        
+        today = pd.Timestamp.now()
+        
+        # Calculate key metrics
+        missed_exmill = df[(df["Ex-Mill Date"] < today) & (df["Balance to Receive Qty"] > 0) & (df["Ex-Mill Date"].notna())]
+        missed_count = len(missed_exmill)
+        missed_percent = round(missed_count / len(df) * 100, 1) if len(df) > 0 else 0
+        
+        upcoming = df[
+            (df["Earliest PCD"] >= today) & 
+            (df["Earliest PCD"] <= today + pd.Timedelta(days=10)) & 
+            (df["Balance to Receive Qty"] > 0) &
+            (df["Earliest PCD"].notna())
+        ]
+        
+        # Group by location
+        location_groups = upcoming.groupby("Ship to Location").size().reset_index(name="count")
+        location_groups = location_groups.sort_values("count", ascending=False).head(5)
+        
+        # Format dates back to strings
+        for col in date_cols:
+            if col in df.columns:
+                df[col] = df[col].dt.strftime('%Y-%m-%d')
+        
+        return jsonify({
+            "data": df.to_dict(orient="records"),
+            "metrics": {
+                "missed_exmill_count": missed_count,
+                "missed_exmill_percent": missed_percent,
+                "upcoming_count": len(upcoming),
+                "top_locations": location_groups.to_dict(orient="records")
+            }
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/upload_requirement', methods=['POST'])
+def upload_requirement():
+    import pandas as pd
+    requirement_file = request.files.get("requirement")
+    if not requirement_file:
+        return jsonify({"error": "Requirement file is required"}), 400
+
+    # Save uploaded file temporarily
+    temp_path = os.path.join(UPLOAD_FOLDER, 'temp_requirement.xlsx')
+    requirement_file.save(temp_path)
+    print("Temp file saved")
+
+    # Read Excel, handle variable header rows
+    df = pd.read_excel(temp_path, dtype=str)
+    first_row = df.iloc[0]
+    print("test 0.1")
+
+
+    os.remove(temp_path)
+
+    print("Columns in requirement file:", df.columns.tolist())
+    df.columns = [col.strip() for col in df.columns]
+    print("Columns in requirement file:", df.columns.tolist())
+    print("test 0.2")
+    df = df[
+        (df['Sub Category'].str.strip().str.upper() == "THREAD (DECIMAL)") &
+        (df['Body Type'].str.strip().str.upper() == "GENERAL RM") &
+        (df['Color Code'].str.contains("C9760", na=False)) &
+        (
+            df['Article Name'].str.startswith('5722160', na=False) |
+            df['Article Name'].str.startswith('2925120', na=False) |
+            df['Article Name'].str.startswith('F025160', na=False) |
+            df['Article Name'].str.startswith('F025140', na=False) |
+            df['Article Name'].str.startswith('57A3140', na=False)
+        ) &
+        (
+            df['OCFactory'].str.contains("INQUBE RANALA SAMPLE ROOM", na=False) |
+            df['OCFactory'].str.contains("BRANDIX ATHLEISURE GIRITALE", na=False) |
+            df['OCFactory'].str.contains("BRANDIX INTIMATES APPAREL MINUWANGODA", na=False) |
+            df['OCFactory'].str.contains("INQUBE PRODUCTION ENGENEERING", na=False) 
+        )
+    ]
+    print("test 0.3")
+    # Map PCD/PSD columns from PCD file using OCNum
+    pcd_path = os.path.join(UPLOAD_FOLDER, "Production Plan.xlsx")
+    if os.path.exists(pcd_path):
+        pcd_df = pd.read_excel(pcd_path, engine="openpyxl")
+        pcd_df.rename(columns={pcd_df.columns[0]: 'OC', pcd_df.columns[1]: 'PCD', pcd_df.columns[2]: 'PSD'}, inplace=True)
+        pcd_df['OC'] = pcd_df['OC'].astype(str)
+        df['OCNum'] = df['OCNum'].astype(str)
+        df = df.merge(pcd_df[['OC', 'PCD', 'PSD']], left_on='OCNum', right_on='OC', how='left')
+        df.drop(columns=['OC'], inplace=True, errors='ignore')
+    else:
+        df['PCD'] = ""
+        df['PSD'] = ""
+
+    print("test 0.4")
+    
+    # Save filtered data as JSON
+    records = df.fillna("o").to_dict(orient='records')
+    with open(os.path.join(UPLOAD_FOLDER, 'requirement.json'), 'w', encoding='utf-8') as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    print("test 0.5")
+    # Save last updated time
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(os.path.join(UPLOAD_FOLDER, 'requirement_last_updated.txt'), 'w') as f:
+        f.write(now_str)
+
+    return jsonify({'last_updated': now_str, 'count': len(records)}), 200
+
+@app.route('/upload_inventory', methods=['POST'])
+def upload_inventory():
+    file = request.files.get('inventory')
+    if not file:
+        return jsonify({'error': 'No file uploaded'}), 400
+
+    # Save uploaded file temporarily
+    temp_path = os.path.join(UPLOAD_FOLDER, 'temp_inventory.xlsx')
+    file.save(temp_path)
+
+    # Read Excel, handle variable header rows
+    df = pd.read_excel(temp_path, dtype=str)
+    # Check if first row is a header or data
+    first_row = df.iloc[0]
+    # If more than 5 columns in first row are filled with date-like values, treat as data, else remove first 2 rows
+    date_like_count = sum(
+        pd.to_datetime(str(val), errors='coerce') is not pd.NaT
+        for val in first_row[:6]
+    )
+    if date_like_count > 5:
+        # Table starts at top, do nothing
+        pass
+    else:
+        # Remove first 2 rows, reset header
+        df = pd.read_excel(temp_path, dtype=str, header=2)
+
+    # Clean up temp file
+    os.remove(temp_path)
+
+    # Filtering
+    df = df[
+        (df['Item Sub Category'].str.strip().str.upper() == "THREAD (DECIMAL)") &
+        (df['Color Code'].str.contains("C9760", na=False)) &
+        (
+            df['Article Name'].str.startswith('5722160', na=False) |
+            df['Article Name'].str.startswith('2925120', na=False) |
+            df['Article Name'].str.startswith('F025160', na=False) |
+            df['Article Name'].str.startswith('F025140', na=False) |
+            df['Article Name'].str.startswith('57A3140', na=False)
+        )
+    ]
+
+    # Save filtered data as JSON
+    records = df.fillna("").to_dict(orient='records')
+    with open(os.path.join(UPLOAD_FOLDER, 'inventory.json'), 'w', encoding='utf-8') as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    # Update last updated time
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(os.path.join(UPLOAD_FOLDER, 'inventory_last_updated.txt'), 'w') as f:
+        f.write(now_str)
+        
+    # Load minimum levels
+    min_levels_path = os.path.join(UPLOAD_FOLDER, 'minimum_levels.json')
+    if os.path.exists(min_levels_path):
+        with open(min_levels_path, 'r', encoding='utf-8') as f:
+            minimum_levels = json.load(f)
+    else:
+        minimum_levels = {}
+    
+    # Check for low stock and send email
+    recipient_email = "pasinduh@inqube.com"  # Set your recipient
+    for item in records:
+        article_code = item.get("Article Name", "").split("-")[0]
+        article_name = item.get("Article Name", "")
+        current_qty = float(item.get("Total Qty", 0))
+        min_qty = float(minimum_levels.get(article_code, 10))
+        #if current_qty < min_qty:
+            #send_low_stock_email(article_code, article_name, current_qty, min_qty, recipient_email)
+
+    return jsonify({'last_updated': now_str, 'count': len(records)}), 200
+
+@app.route("/get_inventory_data", methods=["GET"])
+def get_inventory_data():
+    try:
+        inventory_path = os.path.join(UPLOAD_FOLDER, 'inventory.json')
+        if not os.path.exists(inventory_path):
+            return jsonify({"inventory": []}), 200
+
+        with open(inventory_path, 'r', encoding='utf-8') as f:
+            inventory = json.load(f)
+
+        return jsonify({"inventory": inventory}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get_minimum_levels", methods=["GET"])
+def get_minimum_levels():
+    try:
+        min_levels_path = os.path.join(UPLOAD_FOLDER, 'minimum_levels.json')
+        if not os.path.exists(min_levels_path):
+            return jsonify({"minimumLevels": {}}), 200
+
+        with open(min_levels_path, 'r', encoding='utf-8') as f:
+            minimum_levels = json.load(f)
+
+        return jsonify({"minimumLevels": minimum_levels}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/save_minimum_levels", methods=["POST"])
+def save_minimum_levels():
+    try:
+        data = request.json
+        minimum_levels = data.get('minimumLevels', {})
+
+        min_levels_path = os.path.join(UPLOAD_FOLDER, 'minimum_levels.json')
+        with open(min_levels_path, 'w', encoding='utf-8') as f:
+            json.dump(minimum_levels, f, ensure_ascii=False, indent=2)
+
+        return jsonify({"message": "Minimum levels saved successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/upload_kpi", methods=["POST"])
+def upload_kpi():
+    kpi_file = request.files.get("kpi")
+    if not kpi_file:
+        return jsonify({"error": "KPI file is required"}), 400
+
+    # Save the file temporarily
+    temp_path = os.path.join(UPLOAD_FOLDER, "temp_kpi.xlsx")
+    kpi_file.save(temp_path)
+
+    # Read Excel, handle variable header rows
+    df = pd.read_excel(temp_path, dtype=str)
+    first_row = df.iloc[0]
+    # If more than 5 columns in first row are filled with date-like values, treat as data, else remove first 2 rows
+    date_like_count = sum(
+        pd.to_datetime(str(val), errors='coerce') is not pd.NaT
+        for val in first_row[:6]
+    )
+    if date_like_count > 5:
+        # Table starts at top, do nothing
+        pass
+    #else:
+        # Remove first 2 rows, reset header
+        #df = pd.read_excel(temp_path, dtype=str, header=2)
+
+    # Clean up temp file
+    os.remove(temp_path)
+
+    # Filtering
+    df = df[
+        (df['Article Sub Category'].str.strip().str.upper() == "THREAD (DECIMAL)") &
+        (df['Color Code'].str.contains("C9760", na=False)) &
+        (df['Supplier Name'].str.strip().str.upper() == "COATS THREAD EXPORTS (PVT) LTD") &
+        (
+            df['Article Name'].str.startswith('5722160', na=False) |
+            df['Article Name'].str.startswith('2925120', na=False) |
+            df['Article Name'].str.startswith('F025160', na=False) |
+            df['Article Name'].str.startswith('F025140', na=False) |
+            df['Article Name'].str.startswith('57A3140', na=False)
+        )
+    ]
+
+    # Save filtered data as JSON
+    records = df.fillna("").to_dict(orient='records')
+    with open(os.path.join(UPLOAD_FOLDER, 'kpi.json'), 'w', encoding='utf-8') as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    # Save last updated time
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(os.path.join(UPLOAD_FOLDER, 'kpi_last_updated.txt'), 'w') as f:
+        f.write(now_str)
+
+    return jsonify({'last_updated': now_str, 'count': len(records)}), 200
+
+@app.route("/get_kpi_data", methods=["GET"])
+def get_kpi_data():
+    try:
+        kpi_path = os.path.join(UPLOAD_FOLDER, 'kpi.json')
+        if not os.path.exists(kpi_path):
+            return jsonify({"kpi": []}), 200
+
+        with open(kpi_path, 'r', encoding='utf-8') as f:
+            kpi = json.load(f)
+
+        return jsonify({"kpi": kpi}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get_requirement_data", methods=["GET"])
+def get_requirement_data():
+    try:
+        requirement_path = os.path.join(UPLOAD_FOLDER, 'requirement.json')
+        if not os.path.exists(requirement_path):
+            return jsonify({"requirement": []}), 200
+
+        with open(requirement_path, 'r', encoding='utf-8') as f:
+            requirement = json.load(f)
+
+        return jsonify({"requirement": requirement}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get_requirement_last_updated", methods=["GET"])
+def get_requirement_last_updated():
+    try:
+        path = os.path.join(UPLOAD_FOLDER, "requirement_last_updated.txt")
+        if not os.path.exists(path):
+            return jsonify({"last_updated": ""})
+        with open(path, "r") as f:
+            last_updated = f.read()
+        return jsonify({"last_updated": last_updated})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get_inventory_last_updated", methods=["GET"])
+def get_inventory_last_updated():
+    try:
+        path = os.path.join(UPLOAD_FOLDER, "inventory_last_updated.txt")
+        if not os.path.exists(path):
+            return jsonify({"last_updated": ""})
+        with open(path, "r") as f:
+            last_updated = f.read()
+        return jsonify({"last_updated": last_updated})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/get_kpi_last_updated", methods=["GET"])
+def get_kpi_last_updated():
+    try:
+        path = os.path.join(UPLOAD_FOLDER, "kpi_last_updated.txt")
+        if not os.path.exists(path):
+            return jsonify({"last_updated": ""})
+        with open(path, "r") as f:
+            last_updated = f.read()
+        return jsonify({"last_updated": last_updated})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+@app.route("/process_reports", methods=["POST"])
+def process_reports():
+    try:
+        # Add your processing logic here
+        # For example, read all three reports and generate combined data
+        
+        # Sample implementation
+        requirement_path = os.path.join(UPLOAD_FOLDER, "Requirement.xlsx")
+        inventory_path = os.path.join(UPLOAD_FOLDER, "Inventory.xlsx")
+        kpi_path = os.path.join(UPLOAD_FOLDER, "KPI.xlsx")
+        
+        # Check if files exist
+        if not os.path.exists(requirement_path) or not os.path.exists(inventory_path) or not os.path.exists(kpi_path):
+            return jsonify({"error": "Some files are missing"}), 400
+            
+        # Process files
+        # df_req = pd.read_excel(requirement_path)
+        # df_inv = pd.read_excel(inventory_path)
+        # df_kpi = pd.read_excel(kpi_path)
+        
+        # Your processing logic here...
+        
+        return jsonify({"message": "Reports processed successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/upload_swrm1", methods=["POST"])
+def upload_swrm1():
+    
+    swrm_file = request.files.get("swrm")
+    if not swrm_file:
+        return jsonify({"error": "SWRM file is required"}), 400
+
+    print("test 0.1")
+    temp_path = os.path.join(UPLOAD_FOLDER, "temp_swrm.xlsx")
+    swrm_file.save(temp_path)
+    print("test 0.2")
+
+    # Process in chunks
+    filtered_chunks = []
+    print("test 0.3")
+    try:
+        for chunk in pd.read_excel(temp_path, dtype=str, chunksize=10000, engine="openpyxl"):
+            # Adjust column name as per your file
+            if "Sub Category" in chunk.columns:
+                filtered = chunk[chunk["Sub Category"].str.strip().str.upper() == "THREAD (DECIMAL)"]
+                print("test 0.4")
+                if not filtered.empty:
+                    filtered_chunks.append(filtered)
+                    print("test 0.5")
+        if filtered_chunks:
+            result_df = pd.concat(filtered_chunks)
+            print("test 0.6")
+        else:
+            result_df = pd.DataFrame()
+            print
+        os.remove(temp_path)
+        print("test 0.7")
+    except Exception as e:
+        os.remove(temp_path)
+        print("Error processing SWRM file:", e)
+        return jsonify({"error": str(e)}), 500
+
+    # Save as JSON
+    records = result_df.fillna("").to_dict(orient="records")
+    with open(os.path.join(UPLOAD_FOLDER, "swrm.json"), "w", encoding="utf-8") as f:
+        print("test 0.8")
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print("test 0.9")
+    with open(os.path.join(UPLOAD_FOLDER, "swrm_last_updated.txt"), "w") as f:
+        f.write(now_str)
+        
+    print("test 1.0")
+
+    return jsonify({"last_updated": now_str, "count": len(records)}), 200
+@app.route("/upload_swrm", methods=["POST"])
+def upload_swrm():
+    
+    swrm_file = request.files.get("swrm")
+    if not swrm_file:
+        return jsonify({"error": "SWRM file is required"}), 400
+    print("test 0.1")
+    temp_path = os.path.join(UPLOAD_FOLDER, "temp_swrm.xlsx")
+    swrm_file.save(temp_path)
+    print("test 0.2")
+
+    try:
+        # Read the entire file at once for speed
+        df = pd.read_excel(temp_path, dtype=str, engine="openpyxl")
+        print("test 0.3")
+        # Try both possible column names for robustness
+        subcat_col = None
+        print("test 0.4")
+        for col in df.columns:
+            print("test 0.5")
+            if col.strip().lower() in ["sub category", "subcategory"]:
+                print("test 0.6")
+                subcat_col = col
+                break
+        if not subcat_col:
+            os.remove(temp_path)
+            print("test 0.7")
+            return jsonify({"error": "Sub Category column not found"}), 400
+
+
+        # Filter for THREAD (DECIMAL)
+        print("test 0.8")
+        #filtered_df = df[df[subcat_col].str.strip().str.upper() == "THREAD (DECIMAL)"]
+        filtered_df = df
+
+        os.remove(temp_path)
+
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return jsonify({"error": str(e)}), 500
+
+    # Save as JSON
+    records = filtered_df.fillna("").to_dict(orient="records")
+    with open(os.path.join(UPLOAD_FOLDER, "swrm.json"), "w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2)
+
+    
+    stylecode_col = stylename_col = ocfactory_col = gmtcolor_col = None
+    key_cols = []
+    for col in df.columns:
+        print(col)
+        if col.strip().lower() in ["stylecode"]:
+            stylecode_col = col
+        if col.strip().lower() in ["stylename", "style name"]:
+            stylename_col = col
+        if col.strip().lower() in ["ocfactory"]:
+            ocfactory_col = col
+        if col.strip().lower() in ["gmtcolorname", "gmt color name"]:
+            gmtcolor_col = col
+    key_cols = [stylecode_col, stylename_col, ocfactory_col, gmtcolor_col]
+
+    all_combos = df[key_cols].drop_duplicates()
+    thread_combos = filtered_df[key_cols].drop_duplicates()
+
+    # Find combinations in all_combos that are NOT in thread_combos
+    merged = all_combos.merge(thread_combos, on=key_cols, how='left', indicator=True)
+    missing_combos = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+
+    missing_thread_combinations = missing_combos.fillna("").to_dict(orient="records")
+
+    with open(os.path.join(UPLOAD_FOLDER, "missing_thread_combinations.json"), "w", encoding="utf-8") as f:
+        json.dump(missing_thread_combinations, f, ensure_ascii=False, indent=2)
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(os.path.join(UPLOAD_FOLDER, "swrm_last_updated.txt"), "w") as f:
+        f.write(now_str)
+
+    return jsonify({
+        "last_updated": now_str,
+        "count": len(records),
+        "missing_thread_combinations": missing_thread_combinations
+    }), 200
+    
+@app.route("/get_swrm_data", methods=["GET"])
+def get_swrm_data():
+    try:
+        swrm_path = os.path.join(UPLOAD_FOLDER, 'swrm.json')
+        last_updated_path = os.path.join(UPLOAD_FOLDER, 'swrm_last_updated.txt')
+        missing_combos_path = os.path.join(UPLOAD_FOLDER, 'missing_thread_combinations.json')
+        
+        if not os.path.exists(swrm_path):
+            return jsonify({
+                "swrm": [],
+                "last_updated": "",
+                "missing_thread_combinations": []
+            }), 200
+
+        with open(swrm_path, 'r', encoding='utf-8') as f:
+            swrm = json.load(f)
+            
+        last_updated = ""
+        if os.path.exists(last_updated_path):
+            with open(last_updated_path, 'r') as f:
+                last_updated = f.read()
+                
+        # If missing combinations were saved separately
+        missing_thread_combinations = []
+        if os.path.exists(missing_combos_path):
+            with open(missing_combos_path, 'r', encoding='utf-8') as f:
+                missing_thread_combinations = json.load(f)
+
+        return jsonify({
+            "swrm": swrm,
+            "last_updated": last_updated,
+            "missing_thread_combinations": missing_thread_combinations
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def send_low_stock_email(article_code, article_name, current_qty, min_qty, recipient_email):
+    subject = f"Low Stock Alert: {article_code} - {article_name}"
+    body = f"""
+    Alert: Stock for article {article_code} - {article_name} is below the minimum level.
+    Current Quantity: {current_qty}
+    Minimum Required: {min_qty}
+    Please take necessary action.
+    """
+
+    msg = MIMEMultipart()
+    msg['From'] = "pasinduh@inqube.com"
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    # SMTP config (example for Gmail)
+    smtp_server = "smtp.gmail.com"
+    smtp_port = 587
+    smtp_user = "pasinduh@inqube.com"
+    smtp_password = "your_app_password"  # Use an app password, not your main password
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.sendmail(msg['From'], msg['To'], msg.as_string())
+        server.quit()
+        print(f"Low stock email sent for {article_code}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+        
+        
+        
 if __name__ == "__main__":
     app.run(debug=True)
 
