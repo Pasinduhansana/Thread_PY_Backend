@@ -495,11 +495,11 @@ def upload_requirement():
         (df['Body Type'].str.strip().str.upper() == "GENERAL RM") &
         (df['Color Code'].str.contains("C9760", na=False)) &
         (
-            df['Article Name'].str.startswith('5722160', na=False) |
-            df['Article Name'].str.startswith('2925120', na=False) |
-            df['Article Name'].str.startswith('F025160', na=False) |
-            df['Article Name'].str.startswith('F025140', na=False) |
-            df['Article Name'].str.startswith('57A3140', na=False)
+            df['Article Name'].str.startswith('EV12160', na=False) |
+            df['Article Name'].str.startswith('EV57120', na=False) |
+            df['Article Name'].str.startswith('EVF2160', na=False) |
+            df['Article Name'].str.startswith('EVF2140', na=False) |
+            df['Article Name'].str.startswith('EVS2140', na=False)
         ) &
         (
             df['OCFactory'].str.contains("INQUBE RANALA SAMPLE ROOM", na=False) |
@@ -571,11 +571,11 @@ def upload_inventory():
         (df['Item Sub Category'].str.strip().str.upper() == "THREAD (DECIMAL)") &
         (df['Color Code'].str.contains("C9760", na=False)) &
         (
-            df['Article Name'].str.startswith('5722160', na=False) |
-            df['Article Name'].str.startswith('2925120', na=False) |
-            df['Article Name'].str.startswith('F025160', na=False) |
-            df['Article Name'].str.startswith('F025140', na=False) |
-            df['Article Name'].str.startswith('57A3140', na=False)
+            df['Article Name'].str.startswith('EV12160', na=False) |
+            df['Article Name'].str.startswith('EV57120', na=False) |
+            df['Article Name'].str.startswith('EVF2160', na=False) |
+            df['Article Name'].str.startswith('EVF2140', na=False) |
+            df['Article Name'].str.startswith('EVS2140', na=False)
         )
     ]
 
@@ -685,11 +685,11 @@ def upload_kpi():
         (df['Color Code'].str.contains("C9760", na=False)) &
         (df['Supplier Name'].str.strip().str.upper() == "COATS THREAD EXPORTS (PVT) LTD") &
         (
-            df['Article Name'].str.startswith('5722160', na=False) |
-            df['Article Name'].str.startswith('2925120', na=False) |
-            df['Article Name'].str.startswith('F025160', na=False) |
-            df['Article Name'].str.startswith('F025140', na=False) |
-            df['Article Name'].str.startswith('57A3140', na=False)
+            df['Article Name'].str.startswith('EV12160', na=False) |
+            df['Article Name'].str.startswith('EV57120', na=False) |
+            df['Article Name'].str.startswith('EVF2160', na=False) |
+            df['Article Name'].str.startswith('EVF2140', na=False) |
+            df['Article Name'].str.startswith('EVS2140', na=False)
         )
     ]
 
